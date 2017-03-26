@@ -1,8 +1,10 @@
 ﻿// Copyright (c) Wiesław Šoltés. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using static System.Math;
@@ -12,7 +14,7 @@ namespace Wpf.Controls.PanAndZoom
     /// <summary>
     /// 
     /// </summary>
-    public class ZoomBorder : Border
+    public class ZoomBorder : Border, IScrollInfo
     {
         private UIElement _element;
         private Point _pan;
@@ -34,6 +36,19 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public Action<double, double, double, double> InvalidatedChild { get; set; }
 
+
+        public double Zoom
+        {
+            get { return (double)GetValue(ZoomProperty); }
+            set { SetValue(ZoomProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for Zoom.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty ZoomProperty =
+            DependencyProperty.Register("Zoom", typeof(double), typeof(ZoomBorder), new PropertyMetadata(0.0));
+
+
+
         /// <summary>
         /// 
         /// </summary>
@@ -51,35 +66,38 @@ namespace Wpf.Controls.PanAndZoom
             Unloaded += PanAndZoom_Unloaded;
         }
 
+        public override UIElement Child
+        {
+            set
+            {
+                base.Child = value;
+                Initialize(value);
+            }
+            get { return _element; }
+        }
+
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            _element.Arrange(new Rect(new Point(0,0), _element.DesiredSize));
+            CheckBounds();
+            Invalidate();
+
+            return finalSize;
+        }
+
+        protected override Size MeasureOverride(Size constraint)
+        {
+            _element.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));
+            return constraint;
+        }
+
         private void PanAndZoom_Unloaded(object sender, RoutedEventArgs e)
         {
             if (_element != null)
             {
                 Unload();
             }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public override UIElement Child
-        {
-            get { return base.Child; }
-            set
-            {
-                if (value != null && value != _element && _element != null)
-                {
-                    Unload();
-                }
-
-                base.Child = value;
-
-                if (value != null && value != _element)
-                {
-                    Initialize(value);
-                }
-            }
-        }
+        }    
 
         private void Initialize(UIElement element)
         {
@@ -142,21 +160,7 @@ namespace Wpf.Controls.PanAndZoom
                 PanTo(point);
             }
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="finalSize"></param>
-        /// <returns></returns>
-        protected override Size ArrangeOverride(Size finalSize)
-        {
-            if (_element != null && _element.IsMeasureValid)
-            {
-                AutoFit(this.DesiredSize, _element.DesiredSize);
-            }
-
-            return base.ArrangeOverride(finalSize);
-        }
+        
 
         /// <summary>
         /// 
@@ -169,6 +173,11 @@ namespace Wpf.Controls.PanAndZoom
                 _element.RenderTransformOrigin = new Point(0, 0);
                 _element.RenderTransform = new MatrixTransform(_matrix);
                 _element.InvalidateVisual();
+                ScrollOwner?.InvalidateScrollInfo();
+                Debug.WriteLine($"Matrix: {_matrix}");
+                Debug.WriteLine($"Size: {DesiredSize.Height * _matrix.M22}");
+
+                Zoom = _matrix.M11;
             }
         }
 
@@ -179,9 +188,44 @@ namespace Wpf.Controls.PanAndZoom
         /// <param name="point"></param>
         public void ZoomTo(double zoom, Point point)
         {
+            
             _matrix = MatrixHelper.ScaleAtPrepend(_matrix, zoom, zoom, point.X, point.Y);
 
+            CheckBounds();
+
             Invalidate();
+        }
+
+        private void CheckBounds()
+        {
+            var viewPortSize = this.DesiredSize;
+
+            var minScale = Min(Min(viewPortSize.Height / _element.RenderSize.Height,
+                viewPortSize.Width / _element.RenderSize.Width), 1);
+
+            _matrix.M11 = _matrix.M11 < minScale ? minScale : _matrix.M11;
+            _matrix.M22 = _matrix.M22 < minScale ? minScale : _matrix.M22;
+
+            var contentSize = new Size(_element.RenderSize.Width * _matrix.M11, _element.RenderSize.Height * _matrix.M22);
+
+            if (contentSize.Width <= viewPortSize.Width)
+            {
+                _matrix.OffsetX = (viewPortSize.Width - contentSize.Width) / 2;
+            }
+            else
+            {
+                _matrix.OffsetX = Max(Min(_matrix.OffsetX, 0), viewPortSize.Width - contentSize.Width);
+            }
+
+            if (contentSize.Height <= viewPortSize.Height)
+            {
+                _matrix.OffsetY = (viewPortSize.Height - contentSize.Height) / 2;
+            }
+            else
+            {
+                _matrix.OffsetY = Max(Min(_matrix.OffsetY, 0), viewPortSize.Height - contentSize.Height);
+            }
+
         }
 
         /// <summary>
@@ -216,6 +260,8 @@ namespace Wpf.Controls.PanAndZoom
             _pan = new Point(_pan.X + delta.X, _pan.Y + delta.Y);
             _matrix = MatrixHelper.TranslatePrepend(_matrix, _pan.X, _pan.Y);
 
+            CheckBounds();
+
             Invalidate();
         }
 
@@ -240,6 +286,7 @@ namespace Wpf.Controls.PanAndZoom
 
                 _matrix = MatrixHelper.ScaleAt(zoom, zoom, cx, cy);
 
+                CheckBounds();
                 Invalidate();
             }
         }
@@ -259,9 +306,11 @@ namespace Wpf.Controls.PanAndZoom
                 double eh = elementSize.Height;
                 double zx = pw / ew;
                 double zy = ph / eh;
+                double scale = Max(zx, zy);
 
-                _matrix = MatrixHelper.ScaleAt(zx, zy, ew / 2.0, eh / 2.0);
+                _matrix = MatrixHelper.ScaleAt(scale, scale, ew / 2.0, eh / 2.0);
 
+                CheckBounds();
                 Invalidate();
             }
         }
@@ -318,6 +367,7 @@ namespace Wpf.Controls.PanAndZoom
         {
             _matrix = MatrixHelper.Identity;
 
+            CheckBounds();
             Invalidate();
         }
 
@@ -347,5 +397,102 @@ namespace Wpf.Controls.PanAndZoom
                 AutoFit(this.DesiredSize, _element.RenderSize);
             }
         }
+
+        public void LineUp()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void LineDown()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void LineLeft()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void LineRight()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void PageUp()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void PageDown()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void PageLeft()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void PageRight()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void MouseWheelUp()
+        {
+            //if (_element != null)
+            //{
+            //    Point point = Mouse.GetPosition(_element);
+            //    ZoomDeltaTo(1, point);
+            //    ScrollOwner.InvalidateScrollInfo();
+            //}
+        }
+
+        public void MouseWheelDown()
+        {
+            //if (_element != null)
+            //{
+            //    Point point = Mouse.GetPosition(_element);
+            //    ZoomDeltaTo(-1, point);
+            //    ScrollOwner.InvalidateScrollInfo();
+            //}
+        }
+
+        public void MouseWheelLeft()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void MouseWheelRight()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetHorizontalOffset(double offset)
+        {
+            _matrix.OffsetX = -offset;
+            Invalidate();
+        }
+
+        public void SetVerticalOffset(double offset)
+        {
+            _matrix.OffsetY = -offset;
+            Invalidate();
+        }
+
+        public Rect MakeVisible(Visual visual, Rect rectangle)
+        {
+            return new Rect(new Point(0,0), DesiredSize);
+        }
+
+        public bool CanVerticallyScroll { get; set; }
+        public bool CanHorizontallyScroll { get; set; }
+        public double ExtentWidth => _element.DesiredSize.Width*_matrix.M11;
+        public double ExtentHeight => _element.DesiredSize.Height * _matrix.M22;
+        public double ViewportWidth => ActualWidth;
+        public double ViewportHeight => ActualHeight;
+        public double HorizontalOffset => -_matrix.OffsetX;
+        public double VerticalOffset => -_matrix.OffsetY;
+        public ScrollViewer ScrollOwner { get; set; }
     }
 }

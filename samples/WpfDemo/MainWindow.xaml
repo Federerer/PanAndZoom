@@ -7,7 +7,7 @@
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display"
         Title="PanAndZoom WPF Demo" Height="640" Width="640">
-    <Grid Background="SlateBlue">
+    <Grid Background="DarkGray">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -27,14 +27,22 @@
             <TextBlock Text="T - Toggle AutoFitMode" Foreground="WhiteSmoke" FontSize="11"/>
             <TextBlock Text="Mouse Wheel - Zoom to Point" Foreground="WhiteSmoke" FontSize="11"/>
             <TextBlock Text="Mouse Right Button Down - Pan" Foreground="WhiteSmoke" FontSize="11"/>
+            <TextBlock Text="{Binding ElementName=zoomBorder, Path=Zoom}" Foreground="WhiteSmoke" FontSize="11"/>
         </StackPanel>
-        <paz:ZoomBorder x:Name="zoomBorder" AutoFitMode="None" ZoomSpeed="1.2" ClipToBounds="True" 
-                        Background="DarkGray" 
-                        VerticalAlignment="Stretch" HorizontalAlignment="Stretch" 
-                        Grid.Row="1" Grid.Column="1">
-            <Canvas Background="LightGray" Width="300" Height="300">
-                <Rectangle Canvas.Left="100" Canvas.Top="100" Width="50" Height="50" Fill="Red"/>
-            </Canvas>
-        </paz:ZoomBorder>
+        <ScrollViewer CanContentScroll="True" Grid.Row="1" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <paz:ZoomBorder x:Name="zoomBorder" AutoFitMode="Fill"
+                            Background="#444444" 
+                            TextOptions.TextFormattingMode="Ideal"
+                        >
+                <Border BorderThickness="2" BorderBrush="Red"  HorizontalAlignment="Right">
+                    <Canvas  Background="#808A2BE2" Width="400" Height="250">
+                        <Rectangle Canvas.Left="100" Canvas.Top="100" Width="50" Height="50" Fill="Red"/>
+                        <TextBlock Text="Text" Foreground="Gray" Background="White" Canvas.Left="179" Canvas.Top="83"/>
+                        <TextBlock Text="&#9775;"></TextBlock>
+                        <Button Content="Button" Canvas.Left="59" Canvas.Top="43"></Button>
+                    </Canvas>
+                </Border>
+            </paz:ZoomBorder>
+        </ScrollViewer>
     </Grid>
 </Window>
