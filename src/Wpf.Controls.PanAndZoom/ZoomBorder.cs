@@ -174,8 +174,6 @@ namespace Wpf.Controls.PanAndZoom
                 _element.RenderTransform = new MatrixTransform(_matrix);
                 _element.InvalidateVisual();
                 ScrollOwner?.InvalidateScrollInfo();
-                Debug.WriteLine($"Matrix: {_matrix}");
-                Debug.WriteLine($"Size: {DesiredSize.Height * _matrix.M22}");
 
                 Zoom = _matrix.M11;
             }
@@ -254,11 +252,12 @@ namespace Wpf.Controls.PanAndZoom
         /// <param name="point"></param>
         public void PanTo(Point point)
         {
-            Point delta = new Point(point.X - _previous.X, point.Y - _previous.Y);
-            _previous = new Point(point.X, point.Y);
+            var delta = point - _previous;
+            _previous = point;
 
-            _pan = new Point(_pan.X + delta.X, _pan.Y + delta.Y);
-            _matrix = MatrixHelper.TranslatePrepend(_matrix, _pan.X, _pan.Y);
+            _pan.Offset(delta.X, delta.Y);
+            
+            _matrix.TranslatePrepend(_pan.X, _pan.Y);
 
             CheckBounds();
 
@@ -376,6 +375,7 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public void Extent()
         {
+            Extent(this.DesiredSize, _element.RenderSize);
             Extent(this.DesiredSize, _element.RenderSize);
         }
 
