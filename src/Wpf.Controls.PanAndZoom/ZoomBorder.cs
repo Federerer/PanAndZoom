@@ -14,7 +14,7 @@ namespace Wpf.Controls.PanAndZoom
     /// <summary>
     /// 
     /// </summary>
-    public class ZoomBorder : Border, IScrollInfo
+    public class ZoomBorder : ContentControl, IScrollInfo
     {
         private UIElement _element;
         private Point _pan;
@@ -94,32 +94,41 @@ namespace Wpf.Controls.PanAndZoom
             AutoFitMode = AutoFitMode.None;
 
             Focusable = true;
-            Background = Brushes.Transparent;
 
             Unloaded += PanAndZoom_Unloaded;
         }
 
-        public override UIElement Child
+        //public override UIElement Child
+        //{
+        //    set
+        //    {
+        //        base.Child = value;
+        //        Initialize(value);
+        //    }
+        //    get { return _element; }
+        //}
+
+        protected override void OnContentChanged(object oldContent, object newContent)
         {
-            set
-            {
-                base.Child = value;
-                Initialize(value);
-            }
-            get { return _element; }
+            Initialize(newContent as UIElement);
+            base.OnContentChanged(oldContent, newContent);
         }
 
         protected override Size MeasureOverride(Size constraint)
         {
-            _element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            var child = (UIElement)GetVisualChild(0);
+            child?.Measure(constraint);
+            _element.Measure(constraint);
             return constraint;
         }
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            _element.Arrange(new Rect(new Point(0,0), _element.DesiredSize));
+            var child = (UIElement)GetVisualChild(0);
+            child?.Arrange(new Rect(new Point(0, 0), _element.DesiredSize));
+
             CheckBounds();
-            Invalidate();
+            Invalidate();        
 
             return finalSize;
         }
@@ -212,7 +221,7 @@ namespace Wpf.Controls.PanAndZoom
             {
                 this.InvalidatedChild?.Invoke(_matrix.M11, _matrix.M12, _matrix.OffsetX, _matrix.OffsetY);
                 _element.RenderTransform = new MatrixTransform(_matrix);
-                _element.InvalidateVisual();
+                ((UIElement)GetVisualChild(0)).InvalidateVisual();
                 ScrollOwner?.InvalidateScrollInfo();
 
                 Zoom = _matrix.M11;
@@ -248,7 +257,7 @@ namespace Wpf.Controls.PanAndZoom
             _matrix.M11 = _matrix.M11 < minScale ? minScale : _matrix.M11;
             _matrix.M22 = _matrix.M22 < minScale ? minScale : _matrix.M22;
 
-            var contentSize = new Size(_element.RenderSize.Width * _matrix.M11, _element.RenderSize.Height * _matrix.M22);
+            var contentSize = new Size(_element.DesiredSize.Width * _matrix.M11, _element.DesiredSize.Height * _matrix.M22);
 
             if (contentSize.Width <= viewPortSize.Width)
             {
