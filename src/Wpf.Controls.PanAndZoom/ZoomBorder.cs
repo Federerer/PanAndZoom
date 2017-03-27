@@ -20,11 +20,19 @@ namespace Wpf.Controls.PanAndZoom
         private Point _pan;
         private Point _previous;
         private Matrix _matrix;
-
+            
         /// <summary>
         /// 
         /// </summary>
-        public double ZoomSpeed { get; set; }
+        public double ZoomSpeed
+        {
+            get { return (double)GetValue(ZoomSpeedProperty); }
+            set { SetValue(ZoomSpeedProperty, value); }
+        }
+        
+        public static readonly DependencyProperty ZoomSpeedProperty =
+            DependencyProperty.Register("ZoomSpeed", typeof(double), typeof(ZoomBorder), new PropertyMetadata(1.2));
+
 
         /// <summary>
         /// 
@@ -42,10 +50,35 @@ namespace Wpf.Controls.PanAndZoom
             get { return (double)GetValue(ZoomProperty); }
             set { SetValue(ZoomProperty, value); }
         }
-
-        // Using a DependencyProperty as the backing store for Zoom.  This enables animation, styling, binding, etc...
+        
         public static readonly DependencyProperty ZoomProperty =
             DependencyProperty.Register("Zoom", typeof(double), typeof(ZoomBorder), new PropertyMetadata(0.0));
+
+
+
+
+        public double MinZoom
+        {
+            get { return (double)GetValue(MinZoomProperty); }
+            set { SetValue(MinZoomProperty, value); }
+        }
+        
+        public static readonly DependencyProperty MinZoomProperty =
+            DependencyProperty.Register("MinZoom", typeof(double), typeof(ZoomBorder), new PropertyMetadata(1.0));
+
+
+
+
+
+        public double MaxZoom
+        {
+            get { return (double)GetValue(MaxZoomProperty); }
+            set { SetValue(MaxZoomProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for MaxZoom.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty MaxZoomProperty =
+            DependencyProperty.Register("MaxZoom", typeof(double), typeof(ZoomBorder), new PropertyMetadata(10.0));
 
 
 
@@ -55,7 +88,7 @@ namespace Wpf.Controls.PanAndZoom
         public ZoomBorder()
             : base()
         {
-            _matrix = MatrixHelper.Identity;
+            _matrix = Matrix.Identity;
 
             ZoomSpeed = 1.2;
             AutoFitMode = AutoFitMode.None;
@@ -76,6 +109,12 @@ namespace Wpf.Controls.PanAndZoom
             get { return _element; }
         }
 
+        protected override Size MeasureOverride(Size constraint)
+        {
+            _element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            return constraint;
+        }
+
         protected override Size ArrangeOverride(Size finalSize)
         {
             _element.Arrange(new Rect(new Point(0,0), _element.DesiredSize));
@@ -83,12 +122,6 @@ namespace Wpf.Controls.PanAndZoom
             Invalidate();
 
             return finalSize;
-        }
-
-        protected override Size MeasureOverride(Size constraint)
-        {
-            _element.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));
-            return constraint;
         }
 
         private void PanAndZoom_Unloaded(object sender, RoutedEventArgs e)
@@ -109,7 +142,15 @@ namespace Wpf.Controls.PanAndZoom
                 this.PreviewMouseRightButtonDown += Border_PreviewMouseRightButtonDown;
                 this.PreviewMouseRightButtonUp += Border_PreviewMouseRightButtonUp;
                 this.PreviewMouseMove += Border_PreviewMouseMove;
+                this.ManipulationDelta += Border_ManipulationDelta;
             }
+        }
+
+        private void Border_ManipulationDelta(object sender, ManipulationDeltaEventArgs e)
+        {
+            _matrix.Scale(e.DeltaManipulation.Scale.X, e.DeltaManipulation.Scale.Y);
+            CheckBounds();
+            Invalidate();
         }
 
         private void Unload()
@@ -170,7 +211,6 @@ namespace Wpf.Controls.PanAndZoom
             if (_element != null)
             {
                 this.InvalidatedChild?.Invoke(_matrix.M11, _matrix.M12, _matrix.OffsetX, _matrix.OffsetY);
-                _element.RenderTransformOrigin = new Point(0, 0);
                 _element.RenderTransform = new MatrixTransform(_matrix);
                 _element.InvalidateVisual();
                 ScrollOwner?.InvalidateScrollInfo();
@@ -186,10 +226,14 @@ namespace Wpf.Controls.PanAndZoom
         /// <param name="point"></param>
         public void ZoomTo(double zoom, Point point)
         {
-            
-            _matrix = MatrixHelper.ScaleAtPrepend(_matrix, zoom, zoom, point.X, point.Y);
+            if (_matrix.M11*zoom > MaxZoom)
+            {
+                zoom = MaxZoom / _matrix.M11;
+            }
 
-            CheckBounds();
+            _matrix.ScaleAtPrepend(zoom, zoom, point.X, point.Y);
+
+            CheckBounds();  
 
             Invalidate();
         }
@@ -199,7 +243,7 @@ namespace Wpf.Controls.PanAndZoom
             var viewPortSize = this.DesiredSize;
 
             var minScale = Min(Min(viewPortSize.Height / _element.RenderSize.Height,
-                viewPortSize.Width / _element.RenderSize.Width), 1);
+                viewPortSize.Width / _element.RenderSize.Width), MinZoom);
 
             _matrix.M11 = _matrix.M11 < minScale ? minScale : _matrix.M11;
             _matrix.M22 = _matrix.M22 < minScale ? minScale : _matrix.M22;
@@ -283,7 +327,8 @@ namespace Wpf.Controls.PanAndZoom
                 double cx = ew / 2.0;
                 double cy = eh / 2.0;
 
-                _matrix = MatrixHelper.ScaleAt(zoom, zoom, cx, cy);
+                _matrix = Matrix.Identity;
+                _matrix.ScaleAt(zoom, zoom, cx, cy);
 
                 CheckBounds();
                 Invalidate();
@@ -307,7 +352,8 @@ namespace Wpf.Controls.PanAndZoom
                 double zy = ph / eh;
                 double scale = Max(zx, zy);
 
-                _matrix = MatrixHelper.ScaleAt(scale, scale, ew / 2.0, eh / 2.0);
+                _matrix = Matrix.Identity;
+                _matrix.ScaleAt(scale, scale, ew / 2.0, eh / 2.0);
 
                 CheckBounds();
                 Invalidate();
@@ -364,7 +410,7 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public void Reset()
         {
-            _matrix = MatrixHelper.Identity;
+            _matrix = Matrix.Identity;
 
             CheckBounds();
             Invalidate();
@@ -375,7 +421,6 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public void Extent()
         {
-            Extent(this.DesiredSize, _element.RenderSize);
             Extent(this.DesiredSize, _element.RenderSize);
         }
 
@@ -398,74 +443,70 @@ namespace Wpf.Controls.PanAndZoom
             }
         }
 
+        #region IScrollInfo
+
         public void LineUp()
         {
-            throw new NotImplementedException();
+            PageUp();
         }
 
         public void LineDown()
         {
-            throw new NotImplementedException();
+            PageDown();
         }
 
         public void LineLeft()
         {
-            throw new NotImplementedException();
+            PageLeft();
         }
 
         public void LineRight()
         {
-            throw new NotImplementedException();
+            PageRight();
         }
 
         public void PageUp()
         {
-            throw new NotImplementedException();
+            _matrix.TranslatePrepend(0, 10);
+            CheckBounds();
+            Invalidate();
         }
 
         public void PageDown()
         {
-            throw new NotImplementedException();
+            _matrix.TranslatePrepend(0, -10);
+            CheckBounds();
+            Invalidate();
         }
 
         public void PageLeft()
         {
-            throw new NotImplementedException();
+            _matrix.TranslatePrepend(10, 0);
+            CheckBounds();
+            Invalidate();
         }
 
         public void PageRight()
         {
-            throw new NotImplementedException();
+            _matrix.TranslatePrepend(-10, 0);
+            CheckBounds();
+            Invalidate();
         }
 
         public void MouseWheelUp()
         {
-            //if (_element != null)
-            //{
-            //    Point point = Mouse.GetPosition(_element);
-            //    ZoomDeltaTo(1, point);
-            //    ScrollOwner.InvalidateScrollInfo();
-            //}
         }
 
         public void MouseWheelDown()
         {
-            //if (_element != null)
-            //{
-            //    Point point = Mouse.GetPosition(_element);
-            //    ZoomDeltaTo(-1, point);
-            //    ScrollOwner.InvalidateScrollInfo();
-            //}
         }
 
         public void MouseWheelLeft()
         {
-            throw new NotImplementedException();
         }
 
         public void MouseWheelRight()
         {
-            throw new NotImplementedException();
         }
 
         public void SetHorizontalOffset(double offset)
@@ -482,17 +523,19 @@ namespace Wpf.Controls.PanAndZoom
 
         public Rect MakeVisible(Visual visual, Rect rectangle)
         {
-            return new Rect(new Point(0,0), DesiredSize);
+            return new Rect(new Point(0, 0), Size.Empty);
         }
 
         public bool CanVerticallyScroll { get; set; }
         public bool CanHorizontallyScroll { get; set; }
-        public double ExtentWidth => _element.DesiredSize.Width*_matrix.M11;
+        public double ExtentWidth => _element.DesiredSize.Width * _matrix.M11;
         public double ExtentHeight => _element.DesiredSize.Height * _matrix.M22;
         public double ViewportWidth => ActualWidth;
         public double ViewportHeight => ActualHeight;
         public double HorizontalOffset => -_matrix.OffsetX;
         public double VerticalOffset => -_matrix.OffsetY;
         public ScrollViewer ScrollOwner { get; set; }
+
+        #endregion
     }
 }

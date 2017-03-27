@@ -30,7 +30,10 @@
             <TextBlock Text="{Binding ElementName=zoomBorder, Path=Zoom}" Foreground="WhiteSmoke" FontSize="11"/>
         </StackPanel>
         <ScrollViewer CanContentScroll="True" Grid.Row="1" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <paz:ZoomBorder x:Name="zoomBorder" AutoFitMode="Fill"
+            <paz:ZoomBorder x:Name="zoomBorder" AutoFitMode="Extent"
+                            MinZoom=".5"
+                            MaxZoom="4"
+                            IsManipulationEnabled="true"
                             Background="#444444" 
                             TextOptions.TextFormattingMode="Ideal"
                         >
@@ -40,6 +43,7 @@
                         <TextBlock Text="Text" Foreground="Gray" Background="White" Canvas.Left="179" Canvas.Top="83"/>
                         <TextBlock Text="&#9775;"></TextBlock>
                         <Button Content="Button" Canvas.Left="59" Canvas.Top="43"></Button>
+                        <Ellipse Height="10" Width="10" Fill="BlueViolet" Canvas.Top="120" Canvas.Left="195"/>
                     </Canvas>
                 </Border>
             </paz:ZoomBorder>
