@@ -53,7 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AutoFitMode.cs" />
-    <Compile Include="ZoomBorder.cs" />
+    <Compile Include="ZoomAndPan.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
