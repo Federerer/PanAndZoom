@@ -29,15 +29,12 @@
             <TextBlock Text="Mouse Right Button Down - Pan" Foreground="WhiteSmoke" FontSize="11"/>
             <TextBlock Text="{Binding ElementName=zoomBorder, Path=Zoom}" Foreground="WhiteSmoke" FontSize="11"/>
         </StackPanel>
-        <ScrollViewer CanContentScroll="True" Grid.Row="1" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <paz:ZoomBorder x:Name="zoomBorder" AutoFitMode="Extent"
+        <ScrollViewer Grid.Column="1" Grid.Row="1" CanContentScroll="True" Background="#444444" VerticalScrollBarVisibility="auto" HorizontalScrollBarVisibility="Auto">
+            <paz:ZoomBorder  x:Name="zoomBorder" AutoFitMode="Extent"
                             MinZoom=".5"
                             MaxZoom="4"
-                            IsManipulationEnabled="true"
-                            Background="#444444" 
-                            TextOptions.TextFormattingMode="Ideal"
                         >
-                <Border BorderThickness="2" BorderBrush="Red"  HorizontalAlignment="Right">
+                <Border BorderThickness="2" BorderBrush="Red">
                     <Canvas  Background="#808A2BE2" Width="400" Height="250">
                         <Rectangle Canvas.Left="100" Canvas.Top="100" Width="50" Height="50" Fill="Red"/>
                         <TextBlock Text="Text" Foreground="Gray" Background="White" Canvas.Left="179" Canvas.Top="83"/>

@@ -14,6 +14,7 @@ namespace Wpf.Controls.PanAndZoom
     /// <summary>
     /// 
     /// </summary>
+    [TemplatePart(Name = "PART_Content", Type = typeof(ContentPresenter))]
     public class ZoomBorder : ContentControl, IScrollInfo
     {
         private UIElement _element;
@@ -80,7 +81,11 @@ namespace Wpf.Controls.PanAndZoom
         public static readonly DependencyProperty MaxZoomProperty =
             DependencyProperty.Register("MaxZoom", typeof(double), typeof(ZoomBorder), new PropertyMetadata(10.0));
 
-
+        static ZoomBorder()
+        {
+            DefaultStyleKeyProperty.OverrideMetadata(typeof(ZoomBorder),
+                new FrameworkPropertyMetadata(typeof(ZoomBorder)));
+        }
 
         /// <summary>
         /// 
@@ -108,24 +113,32 @@ namespace Wpf.Controls.PanAndZoom
         //    get { return _element; }
         //}
 
-        protected override void OnContentChanged(object oldContent, object newContent)
+        public override void OnApplyTemplate()
         {
-            Initialize(newContent as UIElement);
-            base.OnContentChanged(oldContent, newContent);
+            base.OnApplyTemplate();
+
+            var element = GetTemplateChild("PART_Content") as ContentPresenter;
+            Initialize(element);
         }
 
-        protected override Size MeasureOverride(Size constraint)
-        {
-            var child = (UIElement)GetVisualChild(0);
-            child?.Measure(constraint);
-            _element.Measure(constraint);
-            return constraint;
-        }
+        //protected override Size MeasureOverride(Size constraint)
+        //{
+        //    _element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        //    if (double.IsPositiveInfinity(constraint.Height) || double.IsPositiveInfinity(constraint.Width))
+        //    {
+        //        return _element.DesiredSize;
+        //    }
+
+        //    return constraint;
+        //}
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            var child = (UIElement)GetVisualChild(0);
-            child?.Arrange(new Rect(new Point(0, 0), _element.DesiredSize));
+            //_element.Arrange(new Rect(new Point(0, 0), _element.DesiredSize));
+            base.ArrangeOverride(finalSize);
+
+            AutoFit();
 
             CheckBounds();
             Invalidate();        
@@ -286,6 +299,7 @@ namespace Wpf.Controls.PanAndZoom
         /// <param name="point"></param>
         public void ZoomDeltaTo(int delta, Point point)
         {
+            AutoFitMode = AutoFitMode.None;
             ZoomTo(delta > 0 ? ZoomSpeed : 1 / ZoomSpeed, point);
         }
 
@@ -297,6 +311,7 @@ namespace Wpf.Controls.PanAndZoom
         {
             _pan = new Point();
             _previous = new Point(point.X, point.Y);
+            AutoFitMode = AutoFitMode.None;
         }
 
         /// <summary>
@@ -362,7 +377,9 @@ namespace Wpf.Controls.PanAndZoom
                 double scale = Max(zx, zy);
 
                 _matrix = Matrix.Identity;
-                _matrix.ScaleAt(scale, scale, ew / 2.0, eh / 2.0);
+                _matrix.Translate((pw - ew) / 2, (ph - eh) / 2);
+                _matrix.ScaleAt(scale, scale, pw / 2, ph / 2);
+
 
                 CheckBounds();
                 Invalidate();
@@ -381,7 +398,6 @@ namespace Wpf.Controls.PanAndZoom
                 switch (AutoFitMode)
                 {
                     case AutoFitMode.None:
-                        Reset();
                         break;
                     case AutoFitMode.Extent:
                         Extent(panelSize, elementSize);
@@ -389,9 +405,7 @@ namespace Wpf.Controls.PanAndZoom
                     case AutoFitMode.Fill:
                         Fill(panelSize, elementSize);
                         break;
-                }
-
-                Invalidate();
+                }               
             }
         }
 
@@ -420,7 +434,6 @@ namespace Wpf.Controls.PanAndZoom
         public void Reset()
         {
             _matrix = Matrix.Identity;
-
             CheckBounds();
             Invalidate();
         }
@@ -430,6 +443,7 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public void Extent()
         {
+            AutoFitMode = AutoFitMode.Extent;
             Extent(this.DesiredSize, _element.RenderSize);
         }
 
@@ -438,6 +452,7 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public void Fill()
         {
+            AutoFitMode = AutoFitMode.Fill;
             Fill(this.DesiredSize, _element.RenderSize);
         }
 
