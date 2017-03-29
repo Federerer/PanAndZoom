@@ -47,7 +47,28 @@ namespace Wpf.Controls.PanAndZoom
         public ZoomAndPan()
         {
             Focusable = true;
-            Unloaded += PanAndZoom_Unloaded;
+            Unloaded += OnUnloaded;
+            Loaded += OnLoaded;
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            Focus();
+            PreviewMouseWheel += OnPreviewMouseWheel;
+            PreviewMouseRightButtonDown += OnPreviewMouseRightButtonDown;
+            PreviewMouseRightButtonUp += OnPreviewMouseRightButtonUp;
+            PreviewMouseMove += OnPreviewMouseMove;
+            ManipulationDelta += OnManipulationDelta;
+            ScrollOwner?.InvalidateScrollInfo();
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            PreviewMouseWheel -= OnPreviewMouseWheel;
+            PreviewMouseRightButtonDown -= OnPreviewMouseRightButtonDown;
+            PreviewMouseRightButtonUp -= OnPreviewMouseRightButtonUp;
+            PreviewMouseMove -= OnPreviewMouseMove;
+            ManipulationDelta -= OnManipulationDelta;
         }
 
         /// <summary>
@@ -81,16 +102,6 @@ namespace Wpf.Controls.PanAndZoom
             set { SetValue(MaxZoomProperty, value); }
         }
 
-        public override UIElement Child
-        {
-            set
-            {
-                base.Child = value;
-                Initialize(value);
-            }
-            get { return base.Child; }
-        }
-
         public Brush Background
         {
             get { return (Brush) GetValue(BackgroundProperty); }
@@ -99,7 +110,8 @@ namespace Wpf.Controls.PanAndZoom
 
         protected override Size MeasureOverride(Size constraint)
         {
-            Child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            Child?.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 
             if (double.IsPositiveInfinity(constraint.Height) || double.IsPositiveInfinity(constraint.Width))
             {
@@ -111,7 +123,8 @@ namespace Wpf.Controls.PanAndZoom
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            Child.Arrange(new Rect(new Point(0, 0), Child.DesiredSize));
+
+            Child?.Arrange(new Rect(new Point(0, 0), Child.DesiredSize));
 
             AutoFit();
 
@@ -119,29 +132,7 @@ namespace Wpf.Controls.PanAndZoom
             Invalidate();
 
             return finalSize;
-        }
-
-        private void PanAndZoom_Unloaded(object sender, RoutedEventArgs e)
-        {
-            if (Child != null)
-            {
-                Unload();
-            }
-        }
-
-        private void Initialize(UIElement element)
-        {
-            if (element != null)
-            {
-                Focus();
-                PreviewMouseWheel += OnPreviewMouseWheel;
-                PreviewMouseRightButtonDown += OnPreviewMouseRightButtonDown;
-                PreviewMouseRightButtonUp += OnPreviewMouseRightButtonUp;
-                PreviewMouseMove += OnPreviewMouseMove;
-                ManipulationDelta += OnManipulationDelta;
-                ScrollOwner?.InvalidateScrollInfo();
-            }
-        }
+        }   
 
         private void OnManipulationDelta(object sender, ManipulationDeltaEventArgs e)
         {
@@ -149,18 +140,6 @@ namespace Wpf.Controls.PanAndZoom
 
             PanBy(delta.Translation);            
             ZoomBy(delta.Scale.X, e.ManipulationOrigin);
-        }
-
-        private void Unload()
-        {
-            if (Child == null) return;
-
-            PreviewMouseWheel -= OnPreviewMouseWheel;
-            PreviewMouseRightButtonDown -= OnPreviewMouseRightButtonDown;
-            PreviewMouseRightButtonUp -= OnPreviewMouseRightButtonUp;
-            PreviewMouseMove -= OnPreviewMouseMove;
-            Child.RenderTransform = null;
-            Child = null;
         }
 
         private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -533,8 +512,8 @@ namespace Wpf.Controls.PanAndZoom
 
         public bool CanVerticallyScroll { get; set; }
         public bool CanHorizontallyScroll { get; set; }
-        public double ExtentWidth => Child.DesiredSize.Width*_matrix.M11;
-        public double ExtentHeight => Child.DesiredSize.Height*_matrix.M22;
+        public double ExtentWidth => Child?.DesiredSize.Width*_matrix.M11 ?? 0.0;
+        public double ExtentHeight => Child?.DesiredSize.Height*_matrix.M22 ?? 0.0;
         public double ViewportWidth => DesiredSize.Width;
         public double ViewportHeight => DesiredSize.Height;
         public double HorizontalOffset => -_matrix.OffsetX;
