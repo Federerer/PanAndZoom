@@ -6,13 +6,6 @@
         <Setter Property="ClipToBounds" Value="True"/>
         <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
         <Setter Property="IsManipulationEnabled" Value="True"/>
-        <!--<Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type local:ZoomBorder}">
-                    <ContentPresenter x:Name="PART_Content"/>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>-->
     </Style>
     
 </ResourceDictionary>

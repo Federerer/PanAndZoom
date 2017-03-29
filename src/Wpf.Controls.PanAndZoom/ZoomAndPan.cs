@@ -145,9 +145,10 @@ namespace Wpf.Controls.PanAndZoom
 
         private void OnManipulationDelta(object sender, ManipulationDeltaEventArgs e)
         {
-            _matrix.Scale(e.DeltaManipulation.Scale.X, e.DeltaManipulation.Scale.Y);
-            ApplyBounds();
-            Invalidate();
+            var delta = e.DeltaManipulation;
+
+            PanBy(delta.Translation);            
+            ZoomBy(delta.Scale.X, e.ManipulationOrigin);
         }
 
         private void Unload()
@@ -226,7 +227,7 @@ namespace Wpf.Controls.PanAndZoom
             }
             else
             {
-                _matrix.ScaleAtPrepend(factor, factor, center.X, center.Y);
+                _matrix.ScaleAt(factor, factor, center.X, center.Y);
                 ApplyBounds();
                 Invalidate();
             }
@@ -299,6 +300,15 @@ namespace Wpf.Controls.PanAndZoom
             _pan.Offset(delta.X, delta.Y);
 
             _matrix.TranslatePrepend(_pan.X, _pan.Y);
+
+            ApplyBounds();
+            Invalidate();
+        }
+
+        public void PanBy(Vector delta)
+        {
+
+            _matrix.Translate(delta.X, delta.Y);
 
             ApplyBounds();
             Invalidate();
@@ -433,9 +443,9 @@ namespace Wpf.Controls.PanAndZoom
         }
 
 
-        protected override void OnRender(DrawingContext dc)
+        protected override void OnRender(DrawingContext drawingContext)
         {
-            dc.DrawRectangle(Background, null, new Rect(RenderSize));
+            drawingContext.DrawRectangle(Background, null, new Rect(RenderSize));
         }
 
         #region IScrollInfo
