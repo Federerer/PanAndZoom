@@ -206,7 +206,7 @@ namespace Wpf.Controls.PanAndZoom
             }
             else
             {
-                _matrix.ScaleAt(factor, factor, center.X, center.Y);
+                _matrix.ScaleAtPrepend(factor, factor, center.X, center.Y);
                 ApplyBounds();
                 Invalidate();
             }
