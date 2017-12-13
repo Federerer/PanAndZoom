@@ -34,6 +34,7 @@
             <paz:ZoomAndPan x:Name="zoomBorder"
                             MinZoom=".5"
                             MaxZoom="4"
+                            AutoFitMode="Extent"
                             Background="#444444">
                 <Border BorderThickness="3" BorderBrush="Red">
                     <Canvas Background="#808A2BE2" Width="400" Height="250">

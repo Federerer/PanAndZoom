@@ -30,8 +30,11 @@ namespace Wpf.Controls.PanAndZoom
             DependencyProperty.Register("Background", typeof(Brush), typeof(ZoomAndPan),
                 new PropertyMetadata(Brushes.Transparent, (o, args) => (o as UIElement)?.InvalidateVisual()));
 
+        public static readonly DependencyProperty AutoFitModeProperty =
+            DependencyProperty.Register("AutoFitMode", typeof(AutoFitMode), typeof(ZoomAndPan),
+                new PropertyMetadata(AutoFitMode.None, (source, args) => (source as ZoomAndPan)?.InvalidateVisual()));
 
-        private AutoFitMode _autoFitMode = AutoFitMode.None;
+        
         private Matrix _matrix = Matrix.Identity;
         private Point _pan;
         private Point _previous;
@@ -100,6 +103,12 @@ namespace Wpf.Controls.PanAndZoom
         {
             get { return (double) GetValue(MaxZoomProperty); }
             set { SetValue(MaxZoomProperty, value); }
+        }
+
+        public AutoFitMode AutoFitMode
+        {
+            get { return (AutoFitMode)GetValue(AutoFitModeProperty); }
+            set { SetValue(AutoFitModeProperty, value); }
         }
 
         public Brush Background
@@ -254,7 +263,7 @@ namespace Wpf.Controls.PanAndZoom
 
         private void DisableAutoFit()
         {
-            _autoFitMode = AutoFitMode.None;
+            AutoFitMode = AutoFitMode.None;
         }
 
         /// <summary>
@@ -353,7 +362,7 @@ namespace Wpf.Controls.PanAndZoom
         {
             if (Child != null)
             {
-                switch (_autoFitMode)
+                switch (AutoFitMode)
                 {
                     case AutoFitMode.None:
                         break;
@@ -371,16 +380,16 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public void ToggleAutoFitMode()
         {
-            switch (_autoFitMode)
+            switch (AutoFitMode)
             {
                 case AutoFitMode.None:
-                    _autoFitMode = AutoFitMode.Extent;
+                    AutoFitMode = AutoFitMode.Extent;
                     break;
                 case AutoFitMode.Extent:
-                    _autoFitMode = AutoFitMode.Fill;
+                    AutoFitMode = AutoFitMode.Fill;
                     break;
                 case AutoFitMode.Fill:
-                    _autoFitMode = AutoFitMode.None;
+                    AutoFitMode = AutoFitMode.None;
                     break;
             }
         }
@@ -399,7 +408,7 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public void Extent()
         {
-            _autoFitMode = AutoFitMode.Extent;
+            AutoFitMode = AutoFitMode.Extent;
             Extent(DesiredSize, Child.DesiredSize);
         }
 
@@ -407,7 +416,7 @@ namespace Wpf.Controls.PanAndZoom
         /// </summary>
         public void Fill()
         {
-            _autoFitMode = AutoFitMode.Fill;
+            AutoFitMode = AutoFitMode.Fill;
             Fill(DesiredSize, Child.DesiredSize);
         }
 
